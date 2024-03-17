@@ -1,165 +1,87 @@
-import React, { useEffect, useState } from 'react';
-import { Card } from 'antd';
-import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
-import { TextField } from '@mui/material';
 
-// CSS style for Card.Grid
-const gridStyle: React.CSSProperties = {
-  width: '20%',
-  textAlign: 'center',  
-};
-
-// Interface defining the structure of a PostUser
-interface PostUser {
-  userId: number;
-  id: number;
-  title: string;
-  body: string;
+import React, { useState, useEffect } from 'react';
+import { Card, Button, Modal, Form, Input } from 'antd';
+import { User, Post } from '../components/types';
+import '../App.css'
+interface UserPostsProps {
+  selectedUser: User | null;
 }
 
-// Props interface for Posts component
-interface PostsProps {
-  selectedUserId: number;
-  setSelectedUserId: (id: number) => void;
-  selectedUserName: string;
-  setSelectedUserName: (name: string) => void;
-}
+const UserPosts: React.FC<UserPostsProps> = ({ selectedUser}) => {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const [error, setError] = useState<string | null>(null);
 
-// Posts component
-export const Posts: React.FC<PostsProps> = ({
-  selectedUserId,
-  setSelectedUserId,
-  selectedUserName,
-  setSelectedUserName,
-}) => {
-  // State for storing post details entered in the form
-  const [postDetails, setPostDetails] = useState({ title: '', body: '' });
-  // State for managing the dialog's open/close state
-  const [open, setOpen] = React.useState(false);
-  // Theme and media query for responsiveness
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
-
-  // Function to open the dialog
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  // Function to close the dialog and reset postDetails state
-  const handleClose = () => {
-    setPostDetails({ title: '', body: '' });
-    setOpen(false);
-  };
-
-  // State to hold fetched posts
-  const [posts, setPosts] = useState<PostUser[]>([]);
-  
-  // Fetch posts based on selectedUserId
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch(`https://jsonplaceholder.typicode.com/posts?userId=${selectedUserId}`);
-        const userPosts = await response.json();
-        
-        setPosts(userPosts);
-      } catch (error) {
-        console.error('Error fetching posts:', error);
+        const response = await fetch(`https://jsonplaceholder.typicode.com/posts?userId=${selectedUser?.id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch posts');
+        }
+        const data = await response.json();
+        setPosts(data);
+      } catch (error: any) {
+        setError(error.message);
       }
     };
-  
-    if (selectedUserId !== 0) {
+
+    if (selectedUser) {
       fetchPosts();
     }
-  }, [selectedUserId]);
+  }, [selectedUser]);
 
-  // Handle input change in the form fields
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setPostDetails((prevDetails) => ({
-      ...prevDetails,
-      [name]: value,
-    }));
-  };
-
-  // Function to handle adding a new post
   const handleAddPost = () => {
-    const newPost: PostUser = {
-      userId: selectedUserId,
-      id: posts.length + 1, // Assuming this is a new post ID (You might need to adjust this logic)
-      title: postDetails.title,
-      body: postDetails.body,
-    };
-    setPosts((prevPosts) => [...prevPosts, newPost]);
-    setPostDetails({ title: '', body: '' });
-    setOpen(false);
+    // Add a new post when form is submitted
+    form.validateFields().then((values) => {
+      const newPost = {
+        userId: selectedUser!.id,
+        id: posts.length + 1,
+        title: values.title,
+        body: values.body,
+      };
+      setPosts([...posts, newPost]);
+      setModalVisible(false);
+      form.resetFields();
+    });
   };
 
   return (
-    <>
-      <Card title={selectedUserName}>
-        {/* Display existing posts */}
-        {posts.map((post, index) => (
-          <Card.Grid key={index} style={gridStyle}>
-            {post.body}
-          </Card.Grid>
+    <div>
+      {error && <p>Error: {error}</p>}
+      <Card title={selectedUser?.name || ''} loading={!posts.length}>
+        {posts.map(post => (
+          <Card.Grid key={post.id}>{post.body}</Card.Grid>
         ))}
       </Card>
-
-      {/* Add Post button and dialog */}
-      <React.Fragment>
-        <Button variant="outlined" onClick={handleClickOpen}>
-          Add Post
-        </Button>
-        <Dialog
-          fullScreen={fullScreen}
-          open={open}
-          onClose={handleClose}
-          aria-labelledby="responsive-dialog-title"
-        >
-          <DialogTitle id="responsive-dialog-title">
-            {"Add a post"}
-          </DialogTitle>
-          <DialogContent>
-            <div>
-              <br />
-              {/* Input fields for title and body */}
-              <TextField
-                id="outlined-basic"
-                label="Title"
-                variant="outlined"
-                name="title"
-                value={postDetails.title}
-                onChange={handleInputChange}
-              />
-              <br />
-              <TextField
-                id="outlined-multiline-static"
-                label="Body Text"
-                multiline
-                rows={4}
-                name="body"
-                value={postDetails.body}
-                onChange={handleInputChange}
-              />
-            </div>
-          </DialogContent>
-          <DialogActions>
-            {/* Cancel and Add buttons */}
-            <Button autoFocus onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddPost} autoFocus>
-              Add
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </React.Fragment>
-    </>
+      <Button className='buttonPost' onClick={() => setModalVisible(true)}>Add Post</Button>
+      <Modal
+        title="Add Post"
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        onOk={handleAddPost}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            label="Title"
+            name="title"
+            rules={[{ required: true, message: 'Please enter the title' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            label="Body"
+            name="body"
+            rules={[{ required: true, message: 'Please enter the body' }]}
+          >
+            <Input.TextArea />
+          </Form.Item>
+        </Form>
+      </Modal>
+ 
+    </div>
   );
 };
+export default UserPosts;
+
