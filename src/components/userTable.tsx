@@ -8,15 +8,17 @@ interface UsersTableProps {
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({ users, setSelectedUser }) => {
+    // build table acoording to the data
+    // with the require filter
     const columns = [
         {
             title: 'Name',
             dataIndex: 'name',
             filters: users ? users.map(user => ({ text: user.name, value: user.name })) : [],
-            filterSearch: true,
+            filterSearch: true,            
             onFilter: (value: any, record: any) => record.name.startsWith(value),
         },
-        {
+        { 
             title: 'Email',
             dataIndex: 'email',
             filters: users ? users.map(user => ({ text: user.email, value: user.email })) : [],
@@ -36,6 +38,7 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, setSelectedUser }) => {
             loading={!users}
             dataSource={users}
             rowKey="id"
+            // return the selected user to the parent component
             onRow={(record: User) => ({
                 onClick: () => setSelectedUser(record),
             })}

@@ -13,6 +13,9 @@ const UserPosts: React.FC<UserPostsProps> = ({ selectedUser}) => {
   const [form] = Form.useForm();
   const [error, setError] = useState<string | null>(null);
 
+  // retrevial the posts of the selected user
+  // and parse the data to json into the array
+
   useEffect(() => {
     const fetchPosts = async () => {
       try {
@@ -55,7 +58,9 @@ const UserPosts: React.FC<UserPostsProps> = ({ selectedUser}) => {
           <Card.Grid key={post.id}>{post.body}</Card.Grid>
         ))}
       </Card>
+
       <Button className='buttonPost' onClick={() => setModalVisible(true)}>Add Post</Button>
+      
       <Modal
         title="Add Post"
         open={modalVisible}
